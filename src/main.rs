@@ -5,9 +5,9 @@ mod controllers;
 mod schema;
 
 use axum::{
-    Router, routing::{get, post},
+    Router, routing::{get, post, put},
 };
-use controllers::post_controller::{list_posts, get_post, create_post};
+use controllers::post_controller::{create_post, get_post, list_posts, update_post};
 use db::establish_connection;
 
 #[tokio::main]
@@ -18,6 +18,7 @@ pub async fn main() -> anyhow::Result<()> {
         .route("/posts", get(list_posts))
         .route("/posts", post(create_post))
         .route("/posts/{id}", get(get_post))
+        .route("/posts/{id}", put(update_post))
         .with_state(pool);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();

@@ -31,4 +31,15 @@ impl<'a> PostRepositoryTrait for PostRepository<'a> {
             .get_result(self.conn)
             .map_err(|e| anyhow::anyhow!(e))
     }
+    
+    fn update(&mut self, new_post: NewPost) -> Result<Post> {
+        diesel::update(posts.find(new_post.id.unwrap()))
+            .set((
+                title.eq(new_post.title),
+                body.eq(new_post.body),
+                published.eq(new_post.published),
+            ))
+            .get_result(self.conn)
+            .map_err(|e|anyhow::anyhow!(e))
+    }
 }

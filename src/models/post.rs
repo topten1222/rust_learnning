@@ -16,10 +16,11 @@ pub struct Post {
 #[derive(Debug, Insertable, Deserialize, Validate)]
 #[diesel(table_name = posts)]
 pub struct NewPost {
+    pub id: Option<i32>,
     #[validate(length(min = 1, message = "Title is required"))]
     pub title: String,
     #[validate(length(min = 1, message = "Body is required"))]
     pub body: String,
-
+    
     pub published: bool,
 }
