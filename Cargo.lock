@@ -250,6 +250,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "file-format"
+version = "0.26.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e7ef3d5e8ae27277c8285ac43ed153158178ef0f79567f32024ca8140a0c7cd8"
+
+[[package]]
 name = "fnv"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -317,6 +323,7 @@ dependencies = [
  "axum",
  "diesel",
  "dotenvy",
+ "file-format",
  "serde",
  "serde_json",
  "tokio",

@@ -5,7 +5,6 @@ use axum::response::IntoResponse;
 use axum::extract::Multipart;
 use std::path::Path;
 use axum::Json;
-
 use crate::models::api_response::ApiResponse;
 use crate::models::contact::Contact;
 
@@ -39,9 +38,21 @@ pub async fn create_contact(multipart: Multipart) -> impl IntoResponse {
 pub async fn upload_file(mut multipart: Multipart, mut contact: Contact) -> Result<(), (StatusCode, String)> {
     while let Some(mut field) = multipart.next_field().await.unwrap() {
         let name = field.name().unwrap();
-            if let Some(value) = field.file_name() {
+            if name == "file" {
+                if field.file_name().unwrap().is_empty() {
+                    continue;
+                }
+                let file_name = field.file_name().unwrap_or_default();
+                let ext = Path::new(&file_name).extension().ok_or("File Format Invalid");
+                if !ext.is_ok() {
+                    return  Err((StatusCode::BAD_REQUEST, "Extension Invalid".to_string()));
+                }
+                let ext_str = ext.unwrap().to_string_lossy().to_lowercase();
+                if ext_str != "jpeg" && ext_str != "jpg" {
+                    return Err((StatusCode::BAD_REQUEST, "File format is not supported".to_string()));
+                }
                 let upload_dir =  "./uploads/";
-                contact.file = format!("{}{}", upload_dir, value);
+                contact.file = format!("{}{}", upload_dir, file_name);
                 if !Path::new(upload_dir).exists() {
                     std::fs::create_dir_all(upload_dir).map_err(|err|(StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
                 }
@@ -54,8 +65,18 @@ pub async fn upload_file(mut multipart: Multipart, mut contact: Contact) -> Resu
                 }
             } else if name == "title" {
                 contact.title = field.text().await.map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?;
+                if contact.title.is_empty() {
+                    return Err((StatusCode::BAD_REQUEST, "Title is required".to_string()));
+                }
             } else if name == "body" {
-                contact.body = field.text().await.map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?;
+                contact.body = field.text().await.map_err(|err|(StatusCode::BAD_REQUEST, err.to_string()))?;
+                if contact.body.is_empty() {
+                    return Err((StatusCode::BAD_REQUEST, "Body is required".to_string()));
+                }
+            } else if name == "file" {
+                
+            } else {
+                return Err((StatusCode::BAD_REQUEST, format!("Unknown field: {}", name)));
             }
     }
     Result::Ok(())
