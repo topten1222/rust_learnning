@@ -42,4 +42,10 @@ impl<'a> PostRepositoryTrait for PostRepository<'a> {
             .get_result(self.conn)
             .map_err(|e|anyhow::anyhow!(e))
     }
+
+    fn delete(&mut self, pid: i32) -> Result<usize> {
+        diesel::delete(posts.find(pid))
+            .execute(self.conn)
+            .map_err(|e| anyhow::anyhow!(e))
+    }
 }

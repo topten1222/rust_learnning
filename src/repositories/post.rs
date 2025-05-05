@@ -6,4 +6,5 @@ pub trait PostRepositoryTrait {
     fn list_all(&mut self) -> Result<Vec<Post>>;
     fn create(&mut self, new_post: NewPost) -> Result<Post>;
     fn update(&mut self, new_post: NewPost) -> Result<Post>;
+    fn delete(&mut self, pid: i32) -> Result<usize>;
 }
