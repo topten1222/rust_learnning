@@ -1,11 +1,10 @@
 use std::io::Write;
-use std::path::Path;
 
-use axum::http::StatusCode;
+use axum::http::{self, StatusCode};
 use axum::{
-    extract::{Multipart, State}, response::IntoResponse
+    extract::{Multipart, State, Path, Json}, response::IntoResponse
 };
-use axum::Json;
+use std::path::Path as PathFile;
 use crate::{db::DbPool, models::{api_response::ApiResponse, contact::{Contact, NewContact}}};
 use crate::repositories::{contact::ContactRepositoryTrait, contact_repository::ContactRepository};
 
@@ -75,7 +74,7 @@ pub async fn upload_file(
             }
 
             let file_name = field.file_name().unwrap_or_default();
-            let ext = Path::new(&file_name).extension().ok_or("File Format Invalid");
+            let ext = PathFile::new(&file_name).extension().ok_or("File Format Invalid");
             
             if !ext.is_ok() {
                 return Err((StatusCode::BAD_REQUEST, "Extension Invalid".to_string()));
@@ -89,7 +88,7 @@ pub async fn upload_file(
             let upload_dir = "./uploads/";
             contact.files = Some(format!("{}{}", upload_dir, file_name));
 
-            if !Path::new(upload_dir).exists() {
+            if !PathFile::new(upload_dir).exists() {
                 std::fs::create_dir_all(upload_dir).map_err(|err| {
                     (StatusCode::INTERNAL_SERVER_ERROR, err.to_string())
                 })?;
@@ -122,4 +121,59 @@ pub async fn upload_file(
     }
 
     Ok(())
+}
+
+pub async fn list_contacts(
+    State(pool): State<DbPool>
+)  -> impl IntoResponse {
+    let mut conn = pool.get().expect("failed to get db");
+    let mut repo = ContactRepository::new(&mut conn);
+    match repo.list_all() {
+        Ok(contacts) => {
+            let response = ApiResponse{
+                status: http::StatusCode::OK.as_u16() as u128,
+                message: "OK".to_string(),
+                data: Some(contacts),
+            };
+            Json(response).into_response()
+        },
+        Err(_) => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, "failed to fetch contacts").into_response()
+    }
+}
+
+pub async fn delete_contact(
+    State(pool): State<DbPool>,
+    Path(id): Path<i32>,
+) -> impl IntoResponse {
+    let mut conn = pool.get().expect("Faild to get db connection");
+    let mut repo = ContactRepository::new(&mut conn);
+    match repo.find_one(id) {
+        Ok(_) => {},
+        Err(_) => return (axum::http::StatusCode::NOT_FOUND, {
+            let response = ApiResponse{
+                status: axum::http::StatusCode::NOT_FOUND.as_u16() as u128,
+                message: "Not Found".to_string(),
+                data: None::<()>,
+            };
+            (axum::http::StatusCode::NOT_FOUND, Json(response))
+        }).into_response()
+    }
+    match repo.delete(id) {
+        Ok(_) => (axum::http::StatusCode::OK, {
+            let response = ApiResponse {
+                status: axum::http::StatusCode::OK.as_u16() as u128,
+                message: "OK".to_string(),
+                data: None::<()>,
+            };
+            (axum::http::StatusCode::OK, Json(response))
+        }).into_response(),
+        Err(_) => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, {
+            let response = ApiResponse{
+                status: axum::http::StatusCode::INTERNAL_SERVER_ERROR.as_u16() as u128,
+                message: "Internal Server error".to_string(),
+                data: None::<()>,
+            };
+        (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(response))
+        }).into_response()
+    }
 }

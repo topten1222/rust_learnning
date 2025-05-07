@@ -1,6 +1,6 @@
-use diesel::{PgConnection, RunQueryDsl};
 use crate::models::contact::{Contact, NewContact};
 use crate::schema::contacts::dsl::*;
+use diesel::prelude::*;
 use anyhow::Result;
 
 use super::contact::ContactRepositoryTrait;
@@ -23,5 +23,18 @@ impl<'a> ContactRepositoryTrait for ContactRepository<'a> {
             .get_result(self.conn)
             .map_err(|e| anyhow::anyhow!(e))
     }
+
+    fn list_all(&mut self) -> Result<Vec<Contact>> {
+        contacts.load::<Contact>(self.conn).map_err(|err|anyhow::anyhow!(err))
+    }
     
+    fn delete(&mut self, contact_id: i32) -> Result<usize> {
+        diesel::delete(contacts.find(contact_id))
+            .execute(self.conn)
+            .map_err(|err|anyhow::anyhow!(err))
+    }
+
+    fn find_one(&mut self, contact_id: i32) -> Result<Contact> {
+        contacts.find(contact_id).first(self.conn).map_err(|err|anyhow::anyhow!(err))
+    }
 }
